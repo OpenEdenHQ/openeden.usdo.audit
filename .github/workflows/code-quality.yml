@@ -1,0 +1,101 @@
+name: code-quality
+run-name: Commit by @${{ github.actor }}
+on: [push]
+concurrency:
+  group: code-quality-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    env:
+      FORCE_COLOR: 1
+      REPORT_GAS: true
+      COIN_MARKETCAP_API_KEY: ${{ secrets.COIN_MARKETCAP_API_KEY }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+      - uses: ./.github/actions/setup
+      - name: Run tests
+        run: npm test
+
+  fuzzing:
+    runs-on: ubuntu-latest
+    env:
+      FORCE_COLOR: 1
+      FOUNDRY_PROFILE: ci
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+      - uses: ./.github/actions/setup
+      - name: Run tests
+        run: forge test -vvv
+
+  static-analysis:
+    runs-on: ubuntu-latest
+    env:
+      FORCE_COLOR: 1
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Run slither
+        uses: crytic/slither-action@v0.3.0
+        with:
+          # CI will fail if any issue with medium severity or above is found
+          fail-on: medium
+          node-version: 18
+          # Exclude openzeppelin contracts analysis and block-timestamp low issue from OZ's permit implementation (ERC2612)
+          slither-args: --filter-paths "openzeppelin|forge-std|test"
+
+  lint:
+    runs-on: ubuntu-latest
+    env:
+      FORCE_COLOR: 1
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - uses: ./.github/actions/setup
+      - name: Run linter
+        run: npm run lint
+
+  coverage:
+    runs-on: ubuntu-latest
+    env:
+      FORCE_COLOR: 1
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - uses: ./.github/actions/setup
+      - name: Run coverage
+        run: npm run coverage
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v3
+        # Always push coverage regardless of test result
+        if: success() || failure()
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+  codespell:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Run CodeSpell
+        uses: codespell-project/actions-codespell@v1
+        with:
+          check_filenames: true
+          skip: package-lock.json, .git
+
+  symbol-execution:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - uses: ./.github/actions/setup
+      - name: Run Mythril Analysis
+        uses: docker://mythril/myth
+        with:
+          args: analyze /github/workspace/contracts/USDO.sol -t 40 --execution-timeout 60 --solc-json /github/workspace/solc.json --solv 0.8.18
