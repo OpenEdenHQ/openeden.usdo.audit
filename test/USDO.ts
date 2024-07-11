@@ -55,10 +55,10 @@ describe('USDO', () => {
       expect(await contract.symbol()).to.equal(symbol);
     });
 
-    it('has 6 decimals', async () => {
+    it('has 18 decimals', async () => {
       const { contract } = await loadFixture(deployUSDOFixture);
 
-      expect(await contract.decimals()).to.be.equal(6);
+      expect(await contract.decimals()).to.be.equal(18);
     });
 
     it('grants admin role to the address passed to the initializer', async () => {

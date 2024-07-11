@@ -63,6 +63,8 @@ contract USDO is
     event AccountBanned(address indexed addr);
     event AccountUnbanned(address indexed addr);
     event BonusMultiplier(uint256 indexed value);
+    event Mint(address indexed to, uint256 amount);
+    event Burn(address indexed from, uint256 amount);
 
     /**
      * Standard ERC20 Errors
@@ -136,10 +138,10 @@ contract USDO is
      * @dev This value is only used for _display_ purposes: it in
      * no way affects any of the arithmetic of the contract, including.
      * {IERC20-balanceOf} and {IERC20-transfer}.
-     * @return The number of decimals (6)
+     * @return The number of decimals (18)
      */
     function decimals() external pure returns (uint8) {
-        return 6;
+        return 18;
     }
 
     /**
@@ -244,6 +246,7 @@ contract USDO is
      */
     function mint(address to, uint256 amount) external onlyRole(MINTER_ROLE) {
         _mint(to, amount);
+        emit Mint(to, amount);
     }
 
     /**
@@ -291,6 +294,7 @@ contract USDO is
      */
     function burn(address from, uint256 amount) external onlyRole(BURNER_ROLE) {
         _burn(from, amount);
+        emit Burn(from, amount);
     }
 
     /**
