@@ -89,10 +89,10 @@ describe('wUSDO', () => {
       expect(await wUSDOContract.maxMint(acc1.address)).to.equal(MaxUint256);
     });
 
-    it('has 6 decimals', async () => {
+    it('has 18 decimals', async () => {
       const { wUSDOContract } = await loadFixture(deployFixture);
 
-      expect(await wUSDOContract.decimals()).to.be.equal(6);
+      expect(await wUSDOContract.decimals()).to.be.equal(18);
     });
 
     it('grants admin role to the address passed to the initializer', async () => {
