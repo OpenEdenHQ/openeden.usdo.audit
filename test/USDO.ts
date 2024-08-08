@@ -1260,9 +1260,10 @@ describe('USDO', () => {
 
       await contract.permit(owner.address, spender.address, value, deadline, v, r, s);
 
-      await expect(contract.permit(owner.address, spender.address, value, deadline, v, r, s))
-        .to.be.revertedWithCustomError(contract, 'ERC2612InvalidSignature')
-        .withArgs(owner.address, spender.address);
+      // Reusing the same signature should fail
+      await expect(
+        contract.permit(owner.address, spender.address, value, deadline, v, r, s),
+      ).to.be.revertedWithCustomError(contract, 'ERC2612InvalidSignature');
     });
 
     it('reverts other signature', async () => {
@@ -1276,7 +1277,7 @@ describe('USDO', () => {
 
       await expect(contract.permit(owner.address, spender.address, value, deadline, v, r, s))
         .to.be.revertedWithCustomError(contract, 'ERC2612InvalidSignature')
-        .withArgs(owner.address, spender.address);
+        .withArgs(otherAcc.address, owner.address); // signer (otherAcc) and owner are different
     });
 
     it('reverts expired permit', async () => {
