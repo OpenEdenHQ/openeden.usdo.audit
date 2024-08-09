@@ -41,7 +41,7 @@ contract USDO is
     // Mapping of shares per address
     mapping(address => uint256) private _shares;
     // Mapping of block status per address
-    mapping(address => bool) private _bannedList;
+    mapping(address => uint8) private _bannedList;
     // Mapping of allowances per owner and spender
     mapping(address => mapping(address => uint256)) private _allowances;
     // Mapping of nonces per address
@@ -78,7 +78,7 @@ contract USDO is
     error ERC20InvalidSpender(address spender);
     // ERC2612 Errors
     error ERC2612ExpiredDeadline(uint256 deadline, uint256 blockTimestamp);
-    error ERC2612InvalidSignature(address owner, address spender);
+    error ERC2612InvalidSignature(address signer, address owner);
     // USDO Errors
     error USDOInvalidMintReceiver(address receiver);
     error USDOInvalidBurnSender(address sender);
@@ -412,7 +412,7 @@ contract USDO is
             revert USDOInvalidBlockedAccount(account);
         }
 
-        _bannedList[account] = true;
+        _bannedList[account] = 1;
         emit AccountBanned(account);
     }
 
@@ -425,7 +425,7 @@ contract USDO is
             revert USDOInvalidBlockedAccount(account);
         }
 
-        _bannedList[account] = false;
+        _bannedList[account] = 0;
         emit AccountUnbanned(account);
     }
 
@@ -457,7 +457,7 @@ contract USDO is
      * @return A boolean value indicating whether the address is blocked.
      */
     function isBanned(address account) public view returns (bool) {
-        return _bannedList[account];
+        return _bannedList[account] == 1;
     }
 
     /**
@@ -489,7 +489,7 @@ contract USDO is
 
         bonusMultiplier = _bonusMultiplier;
 
-        emit BonusMultiplier(bonusMultiplier);
+        emit BonusMultiplier(_bonusMultiplier);
     }
 
     /**
@@ -737,7 +737,7 @@ contract USDO is
         address signer = ECDSAUpgradeable.recover(hash, v, r, s);
 
         if (signer != owner) {
-            revert ERC2612InvalidSignature(owner, spender);
+            revert ERC2612InvalidSignature(signer, owner);
         }
 
         _approve(owner, spender, value);

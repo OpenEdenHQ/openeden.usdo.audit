@@ -54,7 +54,7 @@ contract wUSDO is
 
     // ERC2612 Errors
     error ERC2612ExpiredDeadline(uint256 deadline, uint256 blockTimestamp);
-    error ERC2612InvalidSignature(address owner, address spender);
+    error ERC2612InvalidSignature(address signer, address owner);
 
     // wUSDO Errors
     error wUSDOBlockedSender(address sender);
@@ -162,7 +162,7 @@ contract wUSDO is
         address signer = ECDSAUpgradeable.recover(hash, v, r, s);
 
         if (signer != owner) {
-            revert ERC2612InvalidSignature(owner, spender);
+            revert ERC2612InvalidSignature(signer, owner);
         }
 
         _approve(owner, spender, value);

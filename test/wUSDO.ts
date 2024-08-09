@@ -388,9 +388,9 @@ describe('wUSDO', () => {
 
       await wUSDOContract.permit(owner.address, spender.address, value, deadline, v, r, s);
 
-      await expect(wUSDOContract.permit(owner.address, spender.address, value, deadline, v, r, s))
-        .to.be.revertedWithCustomError(wUSDOContract, 'ERC2612InvalidSignature')
-        .withArgs(owner.address, spender.address);
+      await expect(
+        wUSDOContract.permit(owner.address, spender.address, value, deadline, v, r, s),
+      ).to.be.revertedWithCustomError(wUSDOContract, 'ERC2612InvalidSignature');
     });
 
     it('reverts other signature', async () => {
@@ -404,7 +404,7 @@ describe('wUSDO', () => {
 
       await expect(wUSDOContract.permit(owner.address, spender.address, value, deadline, v, r, s))
         .to.be.revertedWithCustomError(wUSDOContract, 'ERC2612InvalidSignature')
-        .withArgs(owner.address, spender.address);
+        .withArgs(otherAcc.address, owner.address);
     });
 
     it('reverts expired permit', async () => {
@@ -427,6 +427,49 @@ describe('wUSDO', () => {
       await expect(wUSDOContract.permit(owner.address, spender.address, value, deadline, v, r, s))
         .to.be.revertedWithCustomError(wUSDOContract, 'ERC2612ExpiredDeadline')
         .withArgs(deadline, blockTimestamp);
+    });
+  });
+
+  describe('Dust accumulation', () => {
+    it('no dust during deposit and withdrawal', async () => {
+      const { wUSDOContract, USDOContract, owner } = await loadFixture(deployFixture);
+      const initialDeposit = parseUnits('1', 18); // 1 USDO
+
+      // Deposit USDO into wUSDO
+      await USDOContract.updateBonusMultiplier(parseUnits('1', 18)); // Set to 1 initially
+      await USDOContract.mint(owner.address, initialDeposit);
+      await USDOContract.approve(wUSDOContract.address, initialDeposit);
+      await wUSDOContract.deposit(initialDeposit, owner.address);
+
+      // Withdraw the all amount
+      await wUSDOContract.withdraw(initialDeposit, owner.address, owner.address);
+
+      // Check for dust accumulation
+      const remainingUSDO = await USDOContract.balanceOf(wUSDOContract.address);
+      // Dust should be 0 when bonus multiplier is 1
+      expect(remainingUSDO).to.be.eq(ethers.BigNumber.from('0'));
+    });
+
+    it('should adjust dust accumulation with multiplier change', async () => {
+      const { wUSDOContract, USDOContract, owner } = await loadFixture(deployFixture);
+      const initialDeposit = parseUnits('1', 18); // 1 USDO
+
+      // Set initial multiplier and deposit USDO
+      await USDOContract.updateBonusMultiplier(parseUnits('1', 18)); // Set to 1 initially
+      await USDOContract.mint(owner.address, initialDeposit);
+      await USDOContract.approve(wUSDOContract.address, initialDeposit);
+      await wUSDOContract.deposit(initialDeposit, owner.address);
+
+      // Change the multiplier
+      await USDOContract.updateBonusMultiplier(parseUnits('1.1', 18)); // Increase by 10%
+
+      // Redeem all wUSDO
+      const wUSDOBalance = await wUSDOContract.balanceOf(owner.address);
+      await wUSDOContract.redeem(wUSDOBalance, owner.address, owner.address);
+
+      // Check the accumulated dust
+      const remainingUSDO = await USDOContract.balanceOf(wUSDOContract.address);
+      expect(remainingUSDO).to.be.eq(BigNumber.from('1')); // dust very small 1 / 10^18 USDO
     });
   });
 });
